@@ -1,49 +1,105 @@
 "use client";
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import { CldImage } from "next-cloudinary";
+import { UsageLimitModal } from "@/components/UsageLimitModal";
 
-export default function SocialMedia() {
+export default function BgRemoval() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [isTransforming, setIsTransforming] = useState(false);
-  const imageRef = useRef<HTMLImageElement>(null);
+  const [showLimitModal, setShowLimitModal] = useState(false);
+  interface UsageInfo {
+    canUse: boolean;
+    currentCount: number;
+    limit: number | string;
+    remaining: number | string;
+    subscriptionStatus: string;
+  }
+
+  const [usageInfo, setUsageInfo] = useState<UsageInfo | null>(null);
 
   const handleFileUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
     setIsUploading(true);
 
-    const formData = new FormData();
-    formData.append("file", file);
-
+    // Check usage limit first
     try {
-      const response = await fetch("/api/background-remove", {
+      const checkResponse = await fetch("/api/usage-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feature: "bg-removal" }),
+      });
+
+      // Handle non-JSON responses
+      const contentType = checkResponse.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error(
+          "Server returned non-JSON response. Please ensure you're signed in."
+        );
+      }
+
+      const usageStatus = await checkResponse.json();
+
+      if (!usageStatus.canUse) {
+        setUsageInfo(usageStatus);
+        setShowLimitModal(true);
+        setIsUploading(false);
+        return;
+      }
+
+      // Proceed with upload
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("feature", "bg-removal");
+
+      const response = await fetch("/api/upload", {
         method: "POST",
         body: formData,
       });
 
-      if (!response.ok) throw new Error("Failed to upload image");
+      if (response.status === 403) {
+        const errorData = await response.json();
+        setUsageInfo(errorData.usageStatus);
+        setShowLimitModal(true);
+        return;
+      }
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Upload failed: ${errorText}`);
+      }
+
       const data = await response.json();
       setUploadedImage(data.publicId);
+      setUploadedUrl(data.secureUrl);
     } catch (error) {
-      alert("Failed to upload image");
+      console.error("Upload error:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Upload failed. Please try again."
+      );
     } finally {
       setIsUploading(false);
     }
   };
 
   const handleDownload = () => {
-    if (!imageRef.current) return;
-    fetch(imageRef.current.src)
-      .then((response) => response.blob())
+    if (!uploadedUrl) return;
+
+    fetch(uploadedUrl)
+      .then((res) => res.blob())
       .then((blob) => {
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = "background-removed.png";
+        link.download = `bg-removed.png`;
         link.click();
+        window.URL.revokeObjectURL(url);
       });
   };
 
@@ -60,52 +116,35 @@ export default function SocialMedia() {
           </label>
           <input
             type="file"
+            accept="image/*"
             onChange={handleFileUpload}
             className="file-input file-input-bordered file-input-primary w-full"
           />
 
           {isUploading && (
-            <div className="mt-4">
-              <progress className="progress progress-primary w-full"></progress>
-              <p className="text-center text-sm text-gray-500 mt-2">
-                Uploading...
-              </p>
+            <div className="mt-4 text-center">
+              <div className="loading loading-spinner loading-lg"></div>
+              <p className="mt-2">Uploading and removing background...</p>
             </div>
           )}
 
           {uploadedImage && (
             <div className="mt-8">
-              <h3 className="text-lg font-semibold text-gray-700 mb-4">
-                Preview
-              </h3>
-              <div className="relative flex justify-center items-center bg-gray-50 border rounded-xl p-4 shadow-inner">
-                {isTransforming && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70 z-10 rounded-xl">
-                    <span className="loading loading-spinner loading-lg text-primary"></span>
-                  </div>
-                )}
-
+              <div className="flex justify-center mb-4">
                 <CldImage
                   src={uploadedImage}
-                  sizes="100vw"
-                  alt="Background Removed"
-                  crop="fill"
-                  gravity="auto"
-                  ref={imageRef}
-                  className="rounded-lg shadow-md"
-                  onLoad={() => setIsTransforming(false)}
-                  width="500"
-                  height="500"
+                  alt="Background removed"
+                  width={500}
+                  height={500}
                   removeBackground
-                  tint="70:blue:purple"
-                  // underlay="<Public ID>"
+                  className="rounded-lg shadow-md"
                 />
               </div>
 
-              <div className="flex justify-end mt-6">
+              <div className="flex justify-center">
                 <button
-                  className="btn btn-primary px-6 py-2 text-white rounded-lg hover:bg-blue-600 transition"
                   onClick={handleDownload}
+                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
                 >
                   Download Image
                 </button>
@@ -114,6 +153,14 @@ export default function SocialMedia() {
           )}
         </div>
       </div>
+
+      <UsageLimitModal
+        isOpen={showLimitModal}
+        onClose={() => setShowLimitModal(false)}
+        feature="background removal"
+        currentCount={usageInfo?.currentCount || 0}
+        limit={usageInfo?.limit || 5}
+      />
     </div>
   );
 }

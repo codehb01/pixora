@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useRef } from "react";
 import { CldImage } from "next-cloudinary";
+import { UsageLimitModal } from "@/components/UsageLimitModal";
 
 const socialFormats = {
   "Instagram Square (1:1)": { width: 1080, height: 1080, aspectRatio: "1:1" },
@@ -18,6 +19,16 @@ export default function SocialMedia() {
   const [selectedFormat, setSelectedFormat] = useState<SocialFormat>(
     "Instagram Square (1:1)"
   );
+  interface UsageInfo {
+    canUse: boolean;
+    currentCount: number;
+    limit: number | string;
+    remaining: number | string;
+    subscriptionStatus: string;
+  }
+
+  const [showLimitModal, setShowLimitModal] = useState(false);
+  const [usageInfo, setUsageInfo] = useState<UsageInfo | null>(null);
   const [isTransforming, setIsTransforming] = useState(false);
   const imageRef = useRef<HTMLImageElement>(null);
 
@@ -28,16 +39,36 @@ export default function SocialMedia() {
     if (!file) return;
 
     setIsUploading(true);
-    const formData = new FormData();
-    formData.append("file", file);
+    const checkResponse = await fetch("/api/usage-check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ feature: "social-media" }),
+    });
+
+    const usageStatus = await checkResponse.json();
+
+    if (!usageStatus.canUse) {
+      setUsageInfo(usageStatus);
+      setShowLimitModal(true);
+      setIsUploading(false);
+      return;
+    }
 
     try {
-      const response = await fetch("/api/upload", {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("feature", "social-media");
+      const response = await fetch("/api/social-media", {
         method: "POST",
         body: formData,
       });
 
-      if (!response.ok) throw new Error("Failed to upload image");
+      if (response.status === 403) {
+        const errorData = await response.json();
+        setUsageInfo(errorData.usageStatus);
+        setShowLimitModal(true);
+        return;
+      }
 
       const data = await response.json();
       setUploadedImage(data.publicId);
@@ -147,6 +178,14 @@ export default function SocialMedia() {
           </div>
         )}
       </div>
+
+      <UsageLimitModal
+        isOpen={showLimitModal}
+        onClose={() => setShowLimitModal(false)}
+        feature="social media"
+        currentCount={usageInfo?.currentCount || 0}
+        limit={usageInfo?.limit || 5}
+      />
     </div>
   );
 }

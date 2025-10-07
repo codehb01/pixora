@@ -1,11 +1,22 @@
 "use client";
 import React, { useState, useRef } from "react";
 import { CldImage } from "next-cloudinary";
+import { UsageLimitModal } from "@/components/UsageLimitModal";
 
-export default function SocialMedia() {
+interface UsageInfo {
+  canUse: boolean;
+  currentCount: number;
+  limit: number | string;
+  remaining: number | string;
+  subscriptionStatus: string;
+}
+
+export default function SmartCrop() {
   const [uploadedImage, setUploadedImage] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
   const [aspect, setAspect] = useState("1:1");
+  const [showLimitModal, setShowLimitModal] = useState(false);
+  const [usageInfo, setUsageInfo] = useState<UsageInfo | null>(null);
   const [isTransforming, setIsTransforming] = useState(false);
   const imageRef = useRef<HTMLImageElement>(null);
 
@@ -16,16 +27,38 @@ export default function SocialMedia() {
     if (!file) return;
 
     setIsUploading(true);
-    const formData = new FormData();
-    formData.append("file", file);
 
     try {
-      const response = await fetch("/api/upload", {
+      const checkResponse = await fetch("/api/usage-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feature: "smart-crop" }),
+      });
+
+      const usageStatus = await checkResponse.json();
+
+      if (!usageStatus.canUse) {
+        setUsageInfo(usageStatus);
+        setShowLimitModal(true);
+        setIsUploading(false);
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("feature", "smart-crop");
+
+      const response = await fetch("/api/smart-crop", {
         method: "POST",
         body: formData,
       });
 
-      if (!response.ok) throw new Error("Failed to upload image");
+      if (response.status === 403) {
+        const errorData = await response.json();
+        setUsageInfo(errorData.usageStatus);
+        setShowLimitModal(true);
+        return;
+      }
 
       const data = await response.json();
       setUploadedImage(data.publicId);
@@ -56,7 +89,7 @@ export default function SocialMedia() {
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6">
       <div className="bg-white shadow-lg rounded-2xl p-8 w-full max-w-3xl">
         <h1 className="text-3xl font-bold text-center mb-8 text-gray-800">
-          🎨 Social Media Image Creator
+          ✂️ Smart Crop Tool
         </h1>
 
         {/* Upload Section */}
@@ -139,6 +172,14 @@ export default function SocialMedia() {
           </button>
         </div>
       </div>
+
+      <UsageLimitModal
+        isOpen={showLimitModal}
+        onClose={() => setShowLimitModal(false)}
+        feature="smart crop"
+        currentCount={usageInfo?.currentCount || 0}
+        limit={usageInfo?.limit || 5}
+      />
     </div>
   );
 }

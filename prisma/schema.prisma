@@ -22,6 +22,16 @@ model User {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   ImageUpload ImageUpload[]
+  bgRemovalCount Int @default(0)
+  socialMediaCount Int @default(0)
+  smartCropCount Int @default(0)
+
+  // Subscription
+  subscriptionStatus String @default("free")
+  subscriptionId String?
+  subscriptionEndsAt DateTime?
+
+  @@map("users")
 }
 
 model ImageUpload {
@@ -35,3 +45,11 @@ model ImageUpload {
   createdAt    DateTime @default(now())
 }
 
+model UsageLog{
+  id String @id @default(cuid())
+  userId String
+  feature String
+  CreatedAt DateTime @default(now())
+
+  @@map("usage_logs")
+}
