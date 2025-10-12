@@ -1,9 +1,6 @@
 import prisma from "@/lib/prisma";
-export type FeatureType =
-  | "bg-removal"
-  | "social-media"
-  | "smart-crop"
-  | "watermark";
+import { currentUser } from "@clerk/nextjs/server";
+export type FeatureType = "bg-removal" | "social-media" | "smart-crop";
 
 const FEATURE_LIMITS = {
   free: 5,
@@ -13,22 +10,23 @@ const FEATURE_LIMITS = {
 
 export async function checkUsageLimit(userId: string, feature: FeatureType) {
   // Use upsert to handle first-time users atomically
+  const userData = await currentUser();
   const user = await prisma.user.upsert({
     where: { clerkId: userId },
     update: {}, // No updates needed for existing users
     create: {
       clerkId: userId,
+      // email: userData?.emailAddresses[0]?.emailAddress ?? "",
+      name: userData?.fullName ?? "",
       subscriptionStatus: "free",
       bgRemovalCount: 0,
       socialMediaCount: 0,
       smartCropCount: 0,
-      watermarkCount: 0,
     },
     select: {
       bgRemovalCount: true,
       socialMediaCount: true,
       smartCropCount: true,
-      watermarkCount: true,
       subscriptionStatus: true,
     },
   });
@@ -56,11 +54,11 @@ export async function incrementUsage(userId: string, feature: FeatureType) {
     update: {}, // No updates needed for existing users
     create: {
       clerkId: userId,
+
       subscriptionStatus: "free",
       bgRemovalCount: 0,
       socialMediaCount: 0,
       smartCropCount: 0,
-      watermarkCount: 0,
     },
   });
 
@@ -83,7 +81,6 @@ interface UserUsageData {
   bgRemovalCount: number;
   socialMediaCount: number;
   smartCropCount: number;
-  watermarkCount: number;
   subscriptionStatus: string;
 }
 
@@ -95,8 +92,6 @@ function getCurrentCount(user: UserUsageData, feature: FeatureType): number {
       return user.socialMediaCount;
     case "smart-crop":
       return user.smartCropCount;
-    case "watermark":
-      return user.watermarkCount;
     default:
       return 0;
   }
@@ -110,8 +105,6 @@ function getUpdateField(feature: FeatureType): string {
       return "socialMediaCount";
     case "smart-crop":
       return "smartCropCount";
-    case "watermark":
-      return "watermarkCount";
     default:
       throw new Error(`Unknown feature: ${feature}`);
   }

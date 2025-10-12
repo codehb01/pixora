@@ -39,3 +39,4 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 <!-- Errors or problems I came through -->
 1.Tried single api route for multiple pages faced error here.
 2.Tried additional buisness model and webhooks integration here
+3.migrations errors generated folder was in app

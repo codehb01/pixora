@@ -1,6 +1,6 @@
 import prisma from "@/lib/prisma";
 
-export async function ensureUserExists(clerkId: string, email?: string) {
+export async function ensureUserExists(clerkId: string) {
   const existingUser = await prisma.user.findUnique({
     where: { clerkId },
   });

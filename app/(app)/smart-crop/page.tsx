@@ -48,7 +48,7 @@ export default function SmartCrop() {
       formData.append("file", file);
       formData.append("feature", "smart-crop");
 
-      const response = await fetch("/api/smart-crop", {
+      const response = await fetch("/api/upload", {
         method: "POST",
         body: formData,
       });
