@@ -13,7 +13,7 @@ export async function ensureUserExists(clerkId: string) {
         bgRemovalCount: 0,
         socialMediaCount: 0,
         smartCropCount: 0,
-        watermarkCount: 0,
+        // watermarkCount: 0,
       },
     });
   }

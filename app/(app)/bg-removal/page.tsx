@@ -8,6 +8,7 @@ export default function BgRemoval() {
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [showLimitModal, setShowLimitModal] = useState(false);
+
   interface UsageInfo {
     canUse: boolean;
     currentCount: number;
@@ -26,7 +27,6 @@ export default function BgRemoval() {
 
     setIsUploading(true);
 
-    // Check usage limit first
     try {
       const checkResponse = await fetch("/api/usage-check", {
         method: "POST",
@@ -34,7 +34,6 @@ export default function BgRemoval() {
         body: JSON.stringify({ feature: "bg-removal" }),
       });
 
-      // Handle non-JSON responses
       const contentType = checkResponse.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
         throw new Error(
@@ -51,7 +50,7 @@ export default function BgRemoval() {
         return;
       }
 
-      // Proceed with upload
+      // ✅ Upload image
       const formData = new FormData();
       formData.append("file", file);
       formData.append("feature", "bg-removal");
@@ -105,14 +104,15 @@ export default function BgRemoval() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-100 p-6">
-      <div className="w-full max-w-3xl bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
-        <h1 className="text-3xl font-extrabold text-center text-gray-800 mb-6">
+      <div className="w-full max-w-3xl bg-white shadow-2xl rounded-2xl p-8 border border-gray-200">
+        <h1 className="text-3xl md:text-4xl font-extrabold text-center text-gray-800 mb-8">
           🪄 AI Background Remover
         </h1>
 
+        {/* Upload Section */}
         <div className="space-y-4">
-          <label className="block text-gray-600 font-medium">
-            Upload an image
+          <label className="block text-gray-700 font-medium text-center">
+            Upload your image
           </label>
           <input
             type="file"
@@ -122,29 +122,32 @@ export default function BgRemoval() {
           />
 
           {isUploading && (
-            <div className="mt-4 text-center">
-              <div className="loading loading-spinner loading-lg"></div>
-              <p className="mt-2">Uploading and removing background...</p>
+            <div className="mt-6 text-center">
+              <div className="loading loading-spinner loading-lg text-blue-600 mx-auto"></div>
+              <p className="mt-3 text-gray-600">
+                Uploading and removing background...
+              </p>
             </div>
           )}
 
+          {/* Result Section */}
           {uploadedImage && (
-            <div className="mt-8">
-              <div className="flex justify-center mb-4">
+            <div className="mt-10">
+              <div className="flex justify-center mb-6 relative">
                 <CldImage
                   src={uploadedImage}
                   alt="Background removed"
                   width={500}
                   height={500}
-                  removeBackground
-                  className="rounded-lg shadow-md"
+                  // effect="background_removal"
+                  className="rounded-lg shadow-lg border border-gray-200"
                 />
               </div>
 
               <div className="flex justify-center">
                 <button
                   onClick={handleDownload}
-                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+                  className="bg-blue-600 text-white px-8 py-3 rounded-xl font-medium hover:bg-blue-700 transition-all shadow-md"
                 >
                   Download Image
                 </button>
@@ -154,6 +157,7 @@ export default function BgRemoval() {
         </div>
       </div>
 
+      {/* Usage Limit Modal */}
       <UsageLimitModal
         isOpen={showLimitModal}
         onClose={() => setShowLimitModal(false)}

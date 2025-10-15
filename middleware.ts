@@ -1,11 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-const isPublicRoute = createRouteMatcher([
-  "/",
-  "/sign-in",
-  "/sign-up",
-]);
+const isPublicRoute = createRouteMatcher(["/", "/sign-in", "/sign-up","/pricing","/features"]);
 
 const isPublicApiRoute = createRouteMatcher([
   "/api/upload", // Allow uploads for testing
@@ -20,7 +16,7 @@ const isPublicApiRoute = createRouteMatcher([
 export default clerkMiddleware(async (auth, req) => {
   const { userId } = await auth();
   const currentUrl = new URL(req.url);
-  const isHomePage = currentUrl.pathname === "/home";
+  const bgremoval = currentUrl.pathname === "/bg-removal";
   const isApiRequest = currentUrl.pathname.startsWith("/api");
 
   // For API routes, return JSON error instead of redirect
@@ -35,8 +31,8 @@ export default clerkMiddleware(async (auth, req) => {
   }
 
   // checking access cases to the webpage
-  if (userId && isPublicRoute(req) && !isHomePage) {
-    return NextResponse.redirect(new URL("/home", req.url));
+  if (userId && isPublicRoute(req) && !bgremoval) {
+    return NextResponse.redirect(new URL("/bg-removal", req.url));
   }
 
   if (!userId && !isPublicRoute(req) && !isApiRequest) {
