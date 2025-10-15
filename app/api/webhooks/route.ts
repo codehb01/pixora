@@ -1,5 +1,7 @@
 import { Webhook } from "svix";
 import { headers } from "next/headers";
+import type { WebhookEvent } from "@clerk/nextjs/server";
+
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
@@ -28,7 +30,7 @@ export async function POST(req: Request) {
       "svix-id": svix_id,
       "svix-timestamp": svix_timestamp,
       "svix-signature": svix_signature,
-    });
+    }) as WebhookEvent;
   } catch (err) {
     console.error("❌ Error verifying webhook:", err);
     return new NextResponse("Invalid signature", { status: 400 });
