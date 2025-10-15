@@ -54,7 +54,8 @@ export async function incrementUsage(userId: string, feature: FeatureType) {
     update: {}, // No updates needed for existing users
     create: {
       clerkId: userId,
-
+      email: "",
+      name: "",
       subscriptionStatus: "free",
       bgRemovalCount: 0,
       socialMediaCount: 0,

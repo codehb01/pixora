@@ -47,7 +47,7 @@ export async function POST(req: Request) {
       await prisma.user.create({
         data: {
           clerkId: id,
-          email: email_addresses?.[0]?.email_address || null,
+          email: email_addresses?.[0]?.email_address || "",
           name: [first_name, last_name].filter(Boolean).join(" ") || null,
           subscriptionStatus: "free",
           bgRemovalCount: 0,
@@ -75,7 +75,7 @@ export async function POST(req: Request) {
       await prisma.user.update({
         where: { clerkId: id },
         data: {
-          email: email_addresses?.[0]?.email_address || null,
+          email: email_addresses?.[0]?.email_address || "",
           name: [first_name, last_name].filter(Boolean).join(" ") || null,
         },
       });

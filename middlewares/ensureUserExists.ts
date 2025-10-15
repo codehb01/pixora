@@ -9,6 +9,8 @@ export async function ensureUserExists(clerkId: string) {
     await prisma.user.create({
       data: {
         clerkId,
+        email: "",
+        name: "",
         subscriptionStatus: "free",
         bgRemovalCount: 0,
         socialMediaCount: 0,
