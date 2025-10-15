@@ -16,7 +16,7 @@ export async function checkUsageLimit(userId: string, feature: FeatureType) {
     update: {}, // No updates needed for existing users
     create: {
       clerkId: userId,
-      // email: userData?.emailAddresses[0]?.emailAddress ?? "",
+      email: userData?.emailAddresses[0]?.emailAddress ?? "",
       name: userData?.fullName ?? "",
       subscriptionStatus: "free",
       bgRemovalCount: 0,
